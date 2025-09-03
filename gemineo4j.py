@@ -209,6 +209,7 @@ def update_data(schema, data, document):
         system_instruction=data_system_instruction,
         # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=1024),
+        max_output_tokens=65536,
         response_mime_type = "application/json",
         response_schema = data_response_schema
         )
