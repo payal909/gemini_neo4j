@@ -80,7 +80,7 @@ def get_graph_data():
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
         with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
-            records = session.run("MATCH (s)-[r]->(t) RETURN LABELS(s) AS sn,type(r) AS r,LABELS(t) AS tn,s,t").data()
+            records = session.run("MATCH (s) RETURN LABELS(s) AS sn,s").data()
     
     all_nodes = {f"{record['sn']}-{record['s']}": (record["sn"],record["s"]) for record in records}
 
