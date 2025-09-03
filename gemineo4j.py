@@ -98,7 +98,7 @@ schema_response_schema = {
             "snt": {"type": "string"},
             "rt": {"type": "string"},
             "tnt": {"type": "string"},
-        },
+        }
         }
 }
 
@@ -128,7 +128,7 @@ data_response_schema = {
             "sn": {"type": "object", "properties": {"t": {"type": "string"}, "n": {"type": "string"}, "p": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "object", "properties": {"k": {"type": "string"}, "v": {"type": "string"}}}}}},
             "r": {"type": "object", "properties": {"t": {"type": "string"}, "p": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "object", "properties": {"k": {"type": "string"}, "v": {"type": "string"}}}}}},
             "tn": {"type": "object", "properties": {"t": {"type": "string"}, "n": {"type": "string"}, "p": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "object", "properties": {"k": {"type": "string"}, "v": {"type": "string"}}}}}},
-        },
+        }
     }
 }
 
@@ -228,16 +228,16 @@ def update_graph(data):
         with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="WRITE") as session:
             for record in data:
                 snt = record["sn"]["t"]
-                snp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["sn"]["p"]}
+                snp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
                 snp["name"] = f"'{re.sub(r'\W+', '', record['sn']['n'])}'"
                 snp = json.dumps(snp).replace('"',"")
 
                 rt = record["r"]["t"]
-                rp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["r"]["p"]}
+                rp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["r"].get("p",[])}
                 rp = json.dumps(rp).replace('"',"")
 
                 tnt = record["tn"]["t"]
-                tnp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["tn"]["p"]}
+                tnp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["tn"].get("p",[])}
                 tnp["name"] = f"'{re.sub(r'\W+', '', record['tn']['n'])}'"
                 tnp = json.dumps(tnp).replace('"',"")
 
