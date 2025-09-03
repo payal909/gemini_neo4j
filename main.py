@@ -6,6 +6,8 @@ session = st.session_state
 
 if "chat" not in session:
     session["chat"] = []
+if "query" not in session:
+    session["query"] = []
 if "schema" not in session:
     session["schema"] = get_graph_schema()
 if "data" not in session:
@@ -22,11 +24,15 @@ for message in session["chat"]:
         st.write(message["message"])
 
 with st.sidebar:    
+
     with st.form("File"):
         uploaded_file = st.file_uploader("Upload a file", accept_multiple_files=False)
         submit = st.form_submit_button("Submit")
+    
     with st.expander("Graph Info"):
         st.markdown(f"- Node count: {session['node_count']}\n- Relation count: {session['relation_count']}")
+    
+    query_expander = st.expander("Cypher Queries")
 
     if submit and uploaded_file:
         status = st.status("Adding document...")
@@ -37,15 +43,22 @@ with st.sidebar:
         with st.expander("New Schema"):
             st.json(session["updated_schema"])
             st.json(session["updated_data"])
-
+        
 prompt = st.chat_input("Ask a query...")
 if prompt:
-    session["chat"].append({"sender": "user","message": prompt})
+    
     with st.chat_message("user"):
         st.write(prompt)
+    session["chat"].append({"sender": "user","message": prompt})
+    
     with st.chat_message("ai"):
         with st.spinner("Thinking..."):
-            ai_response = text_to_response(session["schema"], session["data"], prompt)
+            cypher_query, ai_response = text_to_response(session["schema"], session["data"], prompt)
+            session["query"].append(cypher_query)
         st.write(ai_response)
     session["chat"].append({"sender": "ai","message": ai_response})
+
+with query_expander:
+    for query in session["query"]:
+        st.code(query)
 
