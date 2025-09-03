@@ -292,10 +292,11 @@ def add_document(status, document, schema=[]):
         updated_data = [record for record in new_data if record not in existing_data]
         return new_schema, new_data, updated_schema, updated_data
 
-def text_to_cypher(schema, text):
+def text_to_cypher(schema, data, text):
 
     cypher_system_instruction = """
     You are an expert at converting engligh based questions into neo4j cypher querie.
+    The graph schema and list os nodes ([node_type, node_name]) is also provided for extra context.
     You will be provided with the existing schema of the neo4j knowlwdge graph your job is to return a cypher query that helps answering the question.
     If the question is not clear or the graph does not have the required data to answer the question return a default cypher query that give all node types."""
         
@@ -310,14 +311,18 @@ def text_to_cypher(schema, text):
 
     cypher_response = client.models.generate_content(
         model=os.environ.get("GEMINI_MODEL"),
-        contents=[f"Existing schema {json.dumps(schema)}", f"User question: {text}"],
+        contents=[
+            f"User question: {text}",
+            f"Existing schema {json.dumps(schema)}",
+            f"List of nodes: {json.dumps(data)}"
+            ],
         config=cypher_config,
         )
         
     return json.loads(cypher_response.text)
 
 def text_to_response(schema, data, text):
-    cypher_query = text_to_cypher(schema, text)
+    cypher_query = text_to_cypher(schema, data, text)
     result = run_query(cypher_query)
     result = json.dumps(result)
 
