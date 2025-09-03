@@ -1,0 +1,15 @@
+google-genai
+langchain
+langchain-neo4j
+langchain-google-genai
+langchain-experimental
+langchain-community
+unstructured
+beautifulsoup4
+openpyxl
+msoffcrypto-tool
+networkx
+pandas
+neo4j
+streamlit
+tabulate
