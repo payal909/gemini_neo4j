@@ -82,7 +82,9 @@ def get_graph_data():
         with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
             records = session.run("MATCH (s)-[r]->(t) RETURN LABELS(s) AS sn,type(r) AS r,LABELS(t) AS tn,s,t").data()
     
-    data = [(record["sn"],record["s"]) for record in records]
+    all_nodes = {f"{record['sn']}-{record['s']}": (record["sn"],record["s"]) for record in records}
+
+    data = [all_nodes[key] for key in set(all_nodes.keys())]
     return data
     
 # class Schema(BaseModel):
@@ -182,7 +184,7 @@ def update_schema(schema, document):
         )
 
     new_schema = json.loads(schema_response.text)
-    new_schema = [{key: re.sub(r'\W+', '', value).replace(" ","_") for key, value in record.items()} for record in new_schema]
+    new_schema = [{key: re.sub(r'[^a-zA-Z0-9 ]', '', value).replace(" ","_") for key, value in record.items()} for record in new_schema]
     new_schema = remove_duplicates(schema + new_schema)
     return new_schema
 
@@ -228,17 +230,17 @@ def update_graph(data):
         with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="WRITE") as session:
             for record in data:
                 snt = record["sn"]["t"]
-                snp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
-                snp["name"] = f"'{re.sub(r'\W+', '', record['sn']['n'])}'"
+                snp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
+                snp["name"] = f"'{re.sub(r'[^a-zA-Z0-9 ]', '', record['sn']['n'])}'"
                 snp = json.dumps(snp).replace('"',"")
 
                 rt = record["r"]["t"]
-                rp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["r"].get("p",[])}
+                rp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["r"].get("p",[])}
                 rp = json.dumps(rp).replace('"',"")
 
                 tnt = record["tn"]["t"]
-                tnp = {re.sub(r'\W+', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["tn"].get("p",[])}
-                tnp["name"] = f"'{re.sub(r'\W+', '', record['tn']['n'])}'"
+                tnp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["tn"].get("p",[])}
+                tnp["name"] = f"'{re.sub(r'[^a-zA-Z0-9 ]', '', record['tn']['n'])}'"
                 tnp = json.dumps(tnp).replace('"',"")
 
                 _ = session.run(f"""
@@ -344,4 +346,4 @@ def text_to_response(schema, data, text):
         config=response_config,
         )
         
-    return response_response.text
+    return cypher_query, response_response.text
