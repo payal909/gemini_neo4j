@@ -26,8 +26,6 @@ for message in session["chat"]:
 with st.sidebar:    
 
     setup_button = st.button("Setup", use_container_width=True)
-    if setup_button:
-        setup_db(st.status("Setting up database..."))
 
     with st.form("File"):
         uploaded_file = st.file_uploader("Upload a file", accept_multiple_files=False)
