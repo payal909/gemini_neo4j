@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from gemineo4j import (setup_db,run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
+from gemineo4j import (setup_db, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
 
 session = st.session_state
 
