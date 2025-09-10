@@ -25,6 +25,10 @@ for message in session["chat"]:
 
 with st.sidebar:    
 
+    setup_button = st.button("Setup", use_container_width=True)
+    if setup_button:
+        setup_db(st.status("Setting up database..."))
+
     with st.form("File"):
         uploaded_file = st.file_uploader("Upload a file", accept_multiple_files=False)
         submit = st.form_submit_button("Submit")
@@ -41,6 +45,9 @@ with st.sidebar:
         with st.expander("New Schema"):
             st.json(session["updated_schema"])
             st.json(session["updated_data"])
+
+if setup_button:
+    setup_db(st.status("Setting up database..."))
         
 prompt = st.chat_input("Ask a query...")
 if prompt:
