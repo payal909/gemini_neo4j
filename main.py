@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from gemineo4j import run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response
+from gemineo4j import (setup_db, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
 
 session = st.session_state
 
@@ -25,6 +25,8 @@ for message in session["chat"]:
 
 with st.sidebar:    
 
+    setup_button = st.button("Setup", use_container_width=True)
+
     with st.form("File"):
         uploaded_file = st.file_uploader("Upload a file", accept_multiple_files=False)
         submit = st.form_submit_button("Submit")
@@ -41,6 +43,9 @@ with st.sidebar:
         with st.expander("New Schema"):
             st.json(session["updated_schema"])
             st.json(session["updated_data"])
+
+if setup_button:
+    setup_db(st.status("Setting up database..."))
         
 prompt = st.chat_input("Ask a query...")
 if prompt:
