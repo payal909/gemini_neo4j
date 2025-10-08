@@ -323,7 +323,10 @@ def text_to_cypher(schema, data, text):
 
 def text_to_response(schema, data, text):
     cypher_query = text_to_cypher(schema, data, text)
-    result = run_query(cypher_query)
+    try:
+        result = run_query(cypher_query)
+    except:
+        result = f"ERROR: There was an error running the cypher query {cypher_query}. Please try a different approach."
     result = json.dumps(result)
 
     response_system_instruction = """
