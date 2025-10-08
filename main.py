@@ -45,7 +45,7 @@ with st.sidebar:
             st.json(session["updated_data"])
 
 if setup_button:
-    setup_db(st.status("Setting up database..."))
+    session["schema"], session["data"] , session["updated_schema"], session["updated_data"] = setup_db(st.status("Setting up database..."))
         
 prompt = st.chat_input("Ask a query...")
 if prompt:

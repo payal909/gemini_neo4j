@@ -26,9 +26,9 @@ os.environ["GEMINI_MODEL"] = [
     # "gemini-2.0-flash-thinking-exp-01-21",
     # "gemini-2.0-flash-lite",
     # "gemini-2.0-flash",
-    # "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
+    "gemini-2.5-flash-lite",
+    # "gemini-2.5-flash",
+    # "gemini-2.5-pro",
 ][0]
 
 
@@ -364,4 +364,4 @@ def setup_db(status):
         {"snt": "Food_Item",        "rt": "HAS",            "tnt": "Food_Variation"},
         {"snt": "Food_Item",        "rt": "AVAILABLE_IN",   "tnt": "Region"}
         ]
-    add_document(status, document, base_schema)
+    return add_document(status, document, base_schema)
