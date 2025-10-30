@@ -15,12 +15,11 @@ import streamlit as st
 
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
-_ = load_dotenv()
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-
-URI = os.environ.get("NEO4J_URI")
-AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
+URI = st.secrets["NEO4J_URI"]
+AUTH = (st.secrets["NEO4J_USERNAME"],st.secrets["NEO4J_PASSWORD"])
+DATABASE = st.secrets["NEO4J_DATABASE"]
 
 gemini_models = [
     # "gemini-2.0-flash-thinking-exp-01-21",
@@ -40,11 +39,9 @@ def remove_duplicates(schema):
     return schema
 
 def run_query(query, mode="READ"):
-    URI = os.environ.get("NEO4J_URI")
-    AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode=mode) as session:
+        with driver.session(database = DATABASE,default_access_mode=mode) as session:
             result = session.run(query).data()        
     return result
 
@@ -54,12 +51,10 @@ def get_graph_info():
     return node_count, relation_count
     
 def get_graph_schema():
-    URI = os.environ.get("NEO4J_URI")
-    AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
     records = []
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+        with driver.session(database = DATABASE,default_access_mode="READ") as session:
             result = session.run("MATCH (n)-[r]->(m) RETURN LABELS(n) AS sn,type(r) AS r, LABELS(m) AS tn")
             for record in result:
                 records.append(record.data())
@@ -76,12 +71,10 @@ def get_graph_schema():
     return schema
 
 def get_graph_data():
-    URI = os.environ.get("NEO4J_URI")
-    AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
     records = []
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+        with driver.session(database = DATABASE,default_access_mode="READ") as session:
             records = session.run("MATCH (s) RETURN LABELS(s) AS sn,s").data()
     
     all_nodes = {f"{record['sn']}-{record['s']}": (record["sn"],record["s"]) for record in records}
@@ -227,11 +220,9 @@ def update_data(schema, data, document):
     return new_data
 
 def update_graph(data):
-    URI = os.environ.get("NEO4J_URI")
-    AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="WRITE") as session:
+        with driver.session(database = DATABASE,default_access_mode="WRITE") as session:
             for record in data:
                 snt = clean_string(record["sn"]["t"])
                 snp = {clean_string(prop["k"]): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
@@ -254,14 +245,12 @@ def update_graph(data):
                 """)
 
 def add_document(status, document, schema=[]):
-    URI = os.environ.get("NEO4J_URI")
-    AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
     no_step = 7
 
     status.progress(100//no_step,text="Fetching existing graph schema")
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+        with driver.session(database = DATABASE,default_access_mode="READ") as session:
             old_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
             old_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
     existing_schema = get_graph_schema() 
@@ -284,7 +273,7 @@ def add_document(status, document, schema=[]):
     status.progress(600//no_step,text="Fetching updated graph schema")
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
-        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+        with driver.session(database = DATABASE,default_access_mode="READ") as session:
             new_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
             new_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
 
