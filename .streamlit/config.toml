@@ -4,3 +4,4 @@ primaryColor = "#C41230"
 
 [server]
 enableCORS = false
+fileWatcherType = "poll"
