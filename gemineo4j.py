@@ -9,7 +9,6 @@ from google.genai import types
 from pydantic import BaseModel
 from pydantic.types import conlist
 from typing import Union
-from dotenv import load_dotenv
 import warnings
 import streamlit as st
 
