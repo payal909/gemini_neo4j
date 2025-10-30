@@ -22,16 +22,18 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 URI = os.environ.get("NEO4J_URI")
 AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
 
-os.environ["GEMINI_MODEL"] = [
+gemini_models = [
     # "gemini-2.0-flash-thinking-exp-01-21",
     # "gemini-2.0-flash-lite",
     # "gemini-2.0-flash",
     "gemini-2.5-flash-lite",
-    # "gemini-2.5-flash",
-    # "gemini-2.5-pro",
-][0]
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+]
 
-
+def clean_string(input_string):
+    return re.sub(r'\s+', '_', re.sub(r'[^a-zA-Z0-9\s#_]', '', input_string, flags=re.UNICODE))
+    
 def remove_duplicates(schema):
     schema_dict ={f"{record["snt"]}-{record["rt"]}-{record["tnt"]}": record for record in schema}
     new_schema = [schema_dict[key] for key in set(schema_dict.keys())]
@@ -87,10 +89,10 @@ def get_graph_data():
     data = [all_nodes[key] for key in set(all_nodes.keys())]
     return data
     
-# class Schema(BaseModel):
-#     snt: str
-#     rt: str
-#     tnt: str
+class Schema(BaseModel):
+    snt: str
+    rt: str
+    tnt: str
 
 schema_response_schema = {
     "type": "array",
@@ -104,23 +106,23 @@ schema_response_schema = {
         }
 }
 
-# class Property(BaseModel):
-#     k: str
-#     v: Union[str, float]
+class Property(BaseModel):
+    k: str
+    v: Union[str, float]
 
-# class Relation(BaseModel):
-#     t: str
-#     p: conlist(Property, min_length=0, max_length=2)
+class Relation(BaseModel):
+    t: str
+    p: conlist(Property, min_length=0, max_length=2)
 
-# class Node(BaseModel):
-#     t: str
-#     n: str
-#     p: conlist(Property, min_length=0, max_length=2)
+class Node(BaseModel):
+    t: str
+    n: str
+    p: conlist(Property, min_length=0, max_length=2)
 
-# class Data(BaseModel):
-#     sn: Node
-#     r: Relation
-#     tn: Node
+class Data(BaseModel):
+    sn: Node
+    r: Relation
+    tn: Node
 
 data_response_schema = {
     "type": "array",
@@ -172,19 +174,20 @@ def update_schema(schema, document):
         temperature=0,
         system_instruction=schema_system_instruction,
         # tools=[{"url_context": {}}],
-        thinking_config = types.ThinkingConfig(thinking_budget=1024),
+        thinking_config = types.ThinkingConfig(thinking_budget=24576),
         response_mime_type = "application/json",
         response_schema = schema_response_schema
+        # response_schema = Schema,
         )
 
     schema_response = client.models.generate_content(
-        model=os.environ.get("GEMINI_MODEL"),
+        model=gemini_models[1],
         contents=[f"Existing schema {json.dumps(schema)}", f"New data source {document}"],
         config=schema_config,
         )
 
     new_schema = json.loads(schema_response.text)
-    new_schema = [{key: re.sub(r'[^a-zA-Z0-9 ]', '', value).replace(" ","_") for key, value in record.items()} for record in new_schema]
+    new_schema = [{key: clean_string(value) for key, value in record.items()} for record in new_schema]
     new_schema = remove_duplicates(schema + new_schema)
     return new_schema
 
@@ -208,14 +211,14 @@ def update_data(schema, data, document):
         temperature=0,
         system_instruction=data_system_instruction,
         # tools=[{"url_context": {}}],
-        thinking_config = types.ThinkingConfig(thinking_budget=1024),
-        max_output_tokens=65536,
+        thinking_config = types.ThinkingConfig(thinking_budget=6144),
         response_mime_type = "application/json",
         response_schema = data_response_schema
+        # response_schema = Data,
         )
 
     data_response = client.models.generate_content(
-        model=os.environ.get("GEMINI_MODEL"),
+        model=gemini_models[2],
         contents=[f"Existing schema {json.dumps(schema)}", f"Existing nodes {json.dumps(data)}",f"New data source {document}"],
         config=data_config,
         )
@@ -230,18 +233,18 @@ def update_graph(data):
         driver.verify_connectivity()
         with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="WRITE") as session:
             for record in data:
-                snt = record["sn"]["t"]
-                snp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
-                snp["name"] = f"'{re.sub(r'[^a-zA-Z0-9 ]', '', record['sn']['n'])}'"
+                snt = clean_string(record["sn"]["t"])
+                snp = {clean_string(prop["k"]): f"'{prop['v']}'" for prop in record["sn"].get("p",[])}
+                snp["name"] = f"'{record['sn']['n']}'"
                 snp = json.dumps(snp).replace('"',"")
 
-                rt = record["r"]["t"]
-                rp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["r"].get("p",[])}
+                rt = clean_string(record["r"]["t"])
+                rp = {clean_string(prop["k"]): f"'{prop['v']}'" for prop in record["r"].get("p",[])}
                 rp = json.dumps(rp).replace('"',"")
 
-                tnt = record["tn"]["t"]
-                tnp = {re.sub(r'[^a-zA-Z0-9 ]', '', prop["k"]).replace(" ","_"): f"'{prop['v']}'" for prop in record["tn"].get("p",[])}
-                tnp["name"] = f"'{re.sub(r'[^a-zA-Z0-9 ]', '', record['tn']['n'])}'"
+                tnt = clean_string(record["tn"]["t"])
+                tnp = {clean_string(prop["k"]): f"'{prop['v']}'" for prop in record["tn"].get("p",[])}
+                tnp["name"] = f"'{record['tn']['n']}'"
                 tnp = json.dumps(tnp).replace('"',"")
 
                 _ = session.run(f"""
@@ -253,44 +256,44 @@ def update_graph(data):
 def add_document(status, document, schema=[]):
     URI = os.environ.get("NEO4J_URI")
     AUTH = (os.environ.get("NEO4J_USERNAME"),os.environ.get("NEO4J_PASSWORD"))
-    with status:
-        st.markdown("- Fetching existing graph schema")
-        with GraphDatabase.driver(URI, auth=AUTH) as driver:
-            driver.verify_connectivity()
-            with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
-                old_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
-                old_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
-        existing_schema = get_graph_schema() 
-        
-        st.markdown("- Fetching existing graph data")
-        existing_data = get_graph_data()
+    no_step = 7
 
-        st.markdown("- Extarcting new schema from document")
-        if len(schema)==0:
-            new_schema = update_schema(existing_schema, document)
-        else:
-            new_schema = remove_duplicates(schema + existing_schema)
+    status.progress(100//no_step,text="Fetching existing graph schema")
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        driver.verify_connectivity()
+        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+            old_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
+            old_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
+    existing_schema = get_graph_schema() 
+    
+    status.progress(200//no_step,text="Fetching existing graph data")
+    existing_data = get_graph_data()
 
-        st.markdown("- Extarcting new data from document")            
-        new_data = update_data(new_schema, existing_data, document)
+    status.progress(300//no_step,text="Extarcting new schema from document")
+    if len(schema)==0:
+        new_schema = update_schema(existing_schema, document)
+    else:
+        new_schema = remove_duplicates(schema + existing_schema)
+    
+    status.progress(400//no_step,text="Extarcting new data from document")            
+    new_data = update_data(new_schema, existing_data, document)
+    
+    status.progress(500//no_step,text="Updating graph")
+    update_graph(new_data)
 
-        st.markdown("- Updating graph")
-        update_graph(new_data)
+    status.progress(600//no_step,text="Fetching updated graph schema")
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        driver.verify_connectivity()
+        with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
+            new_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
+            new_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
 
-        st.markdown("- Fetching updated graph schema")
-        with GraphDatabase.driver(URI, auth=AUTH) as driver:
-            driver.verify_connectivity()
-            with driver.session(database = os.environ.get("NEO4J_DATABASE"),default_access_mode="READ") as session:
-                new_nodes = session.run("MATCH (s) RETURN COUNT(s) AS _").data()[0]["_"]
-                new_relations = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS _").data()[0]["_"]
-
-        st.markdown(f"- Updated node count from {old_nodes} to {new_nodes}. Updated relations count from {old_relations} to {new_relations}")
-        
-        new_schema = get_graph_schema()
-        new_data = get_graph_data()
-        updated_schema = [record for record in new_schema if record not in existing_schema]
-        updated_data = [record for record in new_data if record not in existing_data]
-        return new_schema, new_data, updated_schema, updated_data
+    status.progress(700//no_step,text=f"Updated node count from {old_nodes} to {new_nodes}. Updated relations count from {old_relations} to {new_relations}")
+    new_schema = get_graph_schema()
+    new_data = get_graph_data()
+    updated_schema = [record for record in new_schema if record not in existing_schema]
+    updated_data = [record for record in new_data if record not in existing_data]
+    return new_schema, new_data, updated_schema, updated_data
 
 def text_to_cypher(schema, data, text):
 
@@ -304,13 +307,13 @@ def text_to_cypher(schema, data, text):
         temperature=0,
         system_instruction=cypher_system_instruction,
         # tools=[{"url_context": {}}],
-        thinking_config = types.ThinkingConfig(thinking_budget=1024),
+        thinking_config = types.ThinkingConfig(thinking_budget=512),
         response_mime_type = "application/json",
         response_schema = {"type": "string", "nullable": False},
         )
 
     cypher_response = client.models.generate_content(
-        model=os.environ.get("GEMINI_MODEL"),
+        model=gemini_models[1],
         contents=[
             f"User question: {text}",
             f"Existing schema {json.dumps(schema)}",
@@ -321,10 +324,49 @@ def text_to_cypher(schema, data, text):
         
     return json.loads(cypher_response.text)
 
+def correct_cypher_query(cypher_query, result, schema, data, text):
+    correct_cypher_system_instruction = """
+    You are given the user question about a neo4j knowledge graph along with the cypher query and result of running the cypher query.
+    The graph schema and list os nodes ([node_type, node_name]) is also provided for extra context.
+    Your task is to correct the cypher query based on the user question, incorrect query, graph schema, graph nodes, etc"""
+        
+    correct_cypher_config = types.GenerateContentConfig(
+        temperature=0,
+        system_instruction=correct_cypher_system_instruction,
+        # tools=[{"url_context": {}}],
+        thinking_config = types.ThinkingConfig(thinking_budget=24576),
+        response_mime_type = "application/json",
+        response_schema = {"type": "string", "nullable": False},
+        )
+
+    correct_cypher_response = client.models.generate_content(
+        model=gemini_models[1],
+        contents=[
+            f"User question: {text}",
+            f"Incorrect Cypher query: {cypher_query}",
+            f"Cypher query result: {result}",
+            f"Existing schema {json.dumps(schema)}",
+            f"List of nodes: {json.dumps(data)}"
+            ],
+        config=correct_cypher_config,
+        )
+        
+    return json.loads(correct_cypher_response.text)
+
 def text_to_response(schema, data, text):
     cypher_query = text_to_cypher(schema, data, text)
-    result = run_query(cypher_query)
-    result = json.dumps(result)
+    try:
+        result = run_query(cypher_query)
+        result = json.dumps(result)
+    except Exception as e:
+        result = f"ERROR: There was an error running the cypher query {cypher_query}. Please try a different approach."
+        cypher_query = correct_cypher_query(cypher_query, result, schema, data, text)
+        try:
+            result = run_query(cypher_query)
+            result = json.dumps(result)
+        except Exception as e:
+            result = f"ERROR: There was an error running the cypher query {cypher_query}. Please try a different approach."
+            cypher_query = f"{cypher_query}\n\n{e}"
 
     response_system_instruction = """
     You are given the user question about a neo4j knowledge graph along with the cypher query and result of running the cypher query.
@@ -337,11 +379,11 @@ def text_to_response(schema, data, text):
         temperature=0,
         system_instruction=response_system_instruction,
         # tools=[{"url_context": {}}],
-        thinking_config = types.ThinkingConfig(thinking_budget=1024),
+        thinking_config = types.ThinkingConfig(thinking_budget=24576),
         )
 
     response_response = client.models.generate_content(
-        model=os.environ.get("GEMINI_MODEL"),
+        model=gemini_models[1],
         contents=[
             f"User question: {text}",
             f"Cypher query: {cypher_query}",
@@ -358,10 +400,10 @@ def setup_db(status):
     run_query("MATCH (n) DETACH DELETE n", mode="WRITE")
     document = pd.read_csv("data/Sample Food Nutrition Contents(Nutrition).csv").to_csv(index=False)
     base_schema = [
-        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Ingredient"},
-        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Nutrient"},
-        {"snt": "Ingredients",      "rt": "CONTAINS",       "tnt": "Allergen"},
         {"snt": "Food_Item",        "rt": "HAS",            "tnt": "Food_Variation"},
-        {"snt": "Food_Item",        "rt": "AVAILABLE_IN",   "tnt": "Region"}
+        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Ingredient"},
+        {"snt": "Ingredients",      "rt": "CARRY",          "tnt": "Allergen"},
+        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Nutrient"},
+        {"snt": "Food_Variation",   "rt": "AVAILABLE_IN",   "tnt": "Region"},
         ]
     return add_document(status, document, base_schema)
