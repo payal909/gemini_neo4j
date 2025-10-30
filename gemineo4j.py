@@ -166,7 +166,7 @@ def update_schema(schema, document):
         temperature=0,
         system_instruction=schema_system_instruction,
         # tools=[{"url_context": {}}],
-        thinking_config = types.ThinkingConfig(thinking_budget=24576),
+        thinking_config = types.ThinkingConfig(thinking_budget=12288),
         response_mime_type = "application/json",
         response_schema = schema_response_schema
         # response_schema = Schema,

@@ -82,7 +82,7 @@ if prompt:
         with st.spinner("Thinking...", show_time=True):
             query, ai_response = text_to_response(session["schema"], session["data"], prompt)
             query = "// Cypher Query\n" + query
-        st.write(ai_response)
+        st.write_stream(ai_response)
         st.code(query,language="cypher")
     session["chat"].append({"sender": "ai","message": ai_response, "query": query})
 

@@ -1,6 +1,7 @@
 [theme]
 base = "light"
-primaryColor = "#C41230"
+#primaryColor = "#C41230"
+primaryColor = "#43318F"
 
 [server]
 enableCORS = false
