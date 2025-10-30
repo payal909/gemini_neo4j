@@ -86,4 +86,4 @@ if prompt:
         st.code(query,language="cypher")
     session["chat"].append({"sender": "ai","message": ai_response, "query": query})
 
-st.json(session, expanded=False)
+# st.json(session, expanded=False)
