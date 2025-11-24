@@ -36,13 +36,26 @@ gemini_models = [
     "gemini-2.5-pro",
 ]
 
+def write_chat(message):
+    if message["sender"] == "ai":
+        message_box = st.info
+        avatar = ":material/smart_toy:"
+    else:
+        message_box = st.success
+        avatar = ":material/face:"
+
+    with st.chat_message("ai", avatar=avatar):
+        message_box(message["message"])
+        if message["sender"] == "ai":
+            st.code(message["query"],language="cypher")
+
 def clean_string(input_string):
     return re.sub(r'\s+', '_', re.sub(r'[^a-zA-Z0-9\s#_]', '', input_string, flags=re.UNICODE))
     
 def remove_duplicates(schema):
     schema_dict ={f"{record["snt"]}-{record["rt"]}-{record["tnt"]}": record for record in schema}
     new_schema = [schema_dict[key] for key in set(schema_dict.keys())]
-    return schema
+    return new_schema
 
 def run_query(query, mode="READ"):
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
@@ -248,7 +261,10 @@ def update_graph(data):
                 MERGE (s)-[:{rt} {rp}]->(t)
                 """)
 
-def add_document(status, document, schema=[]):
+def add_document(status, document, schema=""):
+    
+    schema = [{"snt":l[0],"rt":l[1],"tnt":l[2]} for l in re.compile(r'\((.*?)\)-\[(.*?)\]->\((.*?)\)').findall(schema)]
+
     no_step = 7
 
     status.progress(100//no_step,text="Fetching existing graph schema")
@@ -386,14 +402,14 @@ def text_to_response(schema, data, text):
         
     return cypher_query, response_response.text
 
-def setup_db(status):
-    run_query("MATCH (n) DETACH DELETE n", mode="WRITE")
-    document = pd.read_csv("data/Sample Food Nutrition Contents(Nutrition).csv").to_csv(index=False)
-    base_schema = [
-        {"snt": "Food_Item",        "rt": "HAS",            "tnt": "Food_Variation"},
-        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Ingredient"},
-        {"snt": "Ingredients",      "rt": "CARRY",          "tnt": "Allergen"},
-        {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Nutrient"},
-        {"snt": "Food_Variation",   "rt": "AVAILABLE_IN",   "tnt": "Region"},
-        ]
-    return add_document(status, document, base_schema)
+# def setup_db(status):
+#     run_query("MATCH (n) DETACH DELETE n", mode="WRITE")
+#     document = pd.read_csv("data/Sample Food Nutrition Contents(Nutrition).csv").to_csv(index=False)
+#     base_schema = [
+#         {"snt": "Food_Item",        "rt": "HAS",            "tnt": "Food_Variation"},
+#         {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Ingredient"},
+#         {"snt": "Ingredients",      "rt": "CARRY",          "tnt": "Allergen"},
+#         {"snt": "Food_Variation",   "rt": "CONTAINS",       "tnt": "Nutrient"},
+#         {"snt": "Food_Variation",   "rt": "AVAILABLE_IN",   "tnt": "Region"},
+#         ]
+#     return add_document(status, document, base_schema)
