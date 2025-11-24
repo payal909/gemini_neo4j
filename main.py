@@ -20,11 +20,14 @@ if "updated_data" not in session:
 if ("node_count" not in session) or ("relation_count" not in session):
     session["node_count"], session["relation_count"] = get_graph_info()
 if "setup_schema" not in session:
-    session["setup_schema"] = """(Food_Item)-[HAS]->(Food_Variation)
+    if session["node_count"] == 0:
+        session["setup_schema"] = """(Food_Item)-[HAS]->(Food_Variation)
 (Food_Variation)-[CONTAINS]->(Ingredient)
 (Ingredients)-[CARRY]->(Allergen)
 (Food_Variation)-[CONTAINS]->(Nutrient)
 (Food_Variation)-[AVAILABLE_IN]->(Region)"""
+    else:
+       session["setup_schema"]= "" 
 
 for message in session["chat"]:
     write_chat(message)
