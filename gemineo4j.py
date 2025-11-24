@@ -44,14 +44,21 @@ def write_chat(message):
         message_box = st.success
         avatar = ":material/face:"
 
-    with st.chat_message("ai", avatar=avatar):
+    with st.chat_message("ai", avatar=avatar, width="content"):
         message_box(message["message"])
         if message["sender"] == "ai":
-            st.code(message["query"],language="cypher")
+            st.code(message["query"],language="cypher", width="content", wrap_lines=True)
 
 def clean_string(input_string):
     return re.sub(r'\s+', '_', re.sub(r'[^a-zA-Z0-9\s#_]', '', input_string, flags=re.UNICODE))
-    
+
+def format_cyper_query(cypher_query):
+    key_words = ["MATCH", "WHERE", "RETURN", "ORDER BY", "CREATE", "MERGE", "SET", "DELETE", "WITH", "UNWIND"]
+    formated_cyper_query = cypher_query
+    for k in key_words:
+        formated_cyper_query = formated_cyper_query.replace(k,"\n"+k)
+    return formated_cyper_query
+
 def remove_duplicates(schema):
     schema_dict ={f"{record["snt"]}-{record["rt"]}-{record["tnt"]}": record for record in schema}
     new_schema = [schema_dict[key] for key in set(schema_dict.keys())]

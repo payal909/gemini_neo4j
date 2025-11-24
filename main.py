@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import pandas as pd
-from gemineo4j import (write_chat, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
+from gemineo4j import (write_chat, format_cyper_query, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
 
 st.set_page_config(page_title="NutriGraph", page_icon=":material/graph_3:", layout="wide", initial_sidebar_state="expanded")
 
@@ -87,12 +87,12 @@ if prompt:
     write_chat(message)
     session["chat"].append(message)
     
-    with st.chat_message("ai", avatar=":material/smart_toy:"):
+    with st.chat_message("ai", avatar=":material/smart_toy:", width="content"):
         with st.spinner("Thinking...", show_time=True):
             query, ai_response = text_to_response(session["schema"], session["data"], prompt)
-            query = "// Cypher Query\n" + query
+            query = "// Cypher Query\n" + format_cyper_query(query)
         st.info(ai_response)
-        st.code(query,language="cypher")
+        st.code(query,language="cypher", width="content", wrap_lines=True)
     session["chat"].append({"sender": "ai","message": ai_response, "query": query})
 
 if st.secrets["DEV_ENV"]:
