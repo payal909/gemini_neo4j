@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 import pandas as pd
 from gemineo4j import (write_chat, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
 
@@ -65,7 +66,7 @@ if clear_graph:
 
 if submit and uploaded_file:
     with st.spinner("Adding document...", show_time=True):
-        session["setup_schema"] = None
+        session["setup_schema"] = ""
         submit_progress = st.progress(0, text="Adding document...")
         submit_warning = st.empty()
         submit_warning.warning("This may take a few minutes...", icon="⚠️")
@@ -73,6 +74,8 @@ if submit and uploaded_file:
         session["schema"], session["data"] , session["updated_schema"], session["updated_data"] = add_document(submit_progress, document, schema)
         session["node_count"], session["relation_count"] = get_graph_info()
         submit_warning.success("You can now continue with the chat...",  icon="✅")
+        time.sleep(2.5)
+        st.rerun()
     
 prompt = st.chat_input("Ask a query...")
 
