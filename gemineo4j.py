@@ -16,6 +16,13 @@ warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
+seed_config = {
+    "seed": 42,
+    "temperature": 0,
+    "top_p": 0,
+    "top_k": 1,
+}
+
 URI = st.secrets["NEO4J_URI"]
 AUTH = (st.secrets["NEO4J_USERNAME"],st.secrets["NEO4J_PASSWORD"])
 DATABASE = st.secrets["NEO4J_DATABASE"]
@@ -163,13 +170,12 @@ def update_schema(schema, document):
     """
         
     schema_config = types.GenerateContentConfig(
-        temperature=0,
         system_instruction=schema_system_instruction,
-        # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=12288),
         response_mime_type = "application/json",
-        response_schema = schema_response_schema
+        response_schema = schema_response_schema,
         # response_schema = Schema,
+        **seed_config,
         )
 
     schema_response = client.models.generate_content(
@@ -200,13 +206,12 @@ def update_data(schema, data, document):
     """
         
     data_config = types.GenerateContentConfig(
-        temperature=0,
         system_instruction=data_system_instruction,
-        # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=6144),
         response_mime_type = "application/json",
-        response_schema = data_response_schema
+        response_schema = data_response_schema,
         # response_schema = Data,
+        **seed_config,
         )
 
     data_response = client.models.generate_content(
@@ -292,12 +297,11 @@ def text_to_cypher(schema, data, text):
     If the question is not clear or the graph does not have the required data to answer the question return a default cypher query that give all node types."""
         
     cypher_config = types.GenerateContentConfig(
-        temperature=0,
         system_instruction=cypher_system_instruction,
-        # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=512),
         response_mime_type = "application/json",
         response_schema = {"type": "string", "nullable": False},
+        **seed_config,
         )
 
     cypher_response = client.models.generate_content(
@@ -319,12 +323,11 @@ def correct_cypher_query(cypher_query, result, schema, data, text):
     Your task is to correct the cypher query based on the user question, incorrect query, graph schema, graph nodes, etc"""
         
     correct_cypher_config = types.GenerateContentConfig(
-        temperature=0,
         system_instruction=correct_cypher_system_instruction,
-        # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=24576),
         response_mime_type = "application/json",
         response_schema = {"type": "string", "nullable": False},
+        **seed_config,
         )
 
     correct_cypher_response = client.models.generate_content(
@@ -364,10 +367,9 @@ def text_to_response(schema, data, text):
     use the provided data and let user know that you can anser question only about the schema and nodes provided."""
         
     response_config = types.GenerateContentConfig(
-        temperature=0,
         system_instruction=response_system_instruction,
-        # tools=[{"url_context": {}}],
         thinking_config = types.ThinkingConfig(thinking_budget=24576),
+        **seed_config,
         )
 
     response_response = client.models.generate_content(

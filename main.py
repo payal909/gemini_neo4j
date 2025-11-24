@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from gemineo4j import (setup_db, run_query, get_graph_info, get_graph_schema, get_graph_data, add_document, text_to_response)
 
+
+st.set_page_config(page_title="NutriGraph", page_icon=":material/graph_3:", layout="wide", initial_sidebar_state="expanded")
+
 session = st.session_state
 
 if "chat" not in session:
@@ -23,7 +26,9 @@ for message in session["chat"]:
         if message["sender"] == "ai":
             st.code(message["query"],language="cypher")
 
-sidebar = st.sidebar   
+sidebar = st.sidebar 
+
+sidebar.title(":material/graph_3: NutriGraph")
 
 st.caption(
     """<style>
@@ -32,6 +37,8 @@ st.caption(
             footer {visibility:hidden;}
             body {overflow: hidden;}
             section[data-testid="stSidebar"] {min-width: 500px; max-width: 500px;}
+            div[data-testid="stSidebarHeader"] {display: none}
+            div[data-testid="stMainBlockContainer"] {padding: 2.5rem}
             div[data-testid="stSidebarCollapseButton"] {display: none;}
         </style>""",
     unsafe_allow_html=True,
@@ -82,8 +89,9 @@ if prompt:
         with st.spinner("Thinking...", show_time=True):
             query, ai_response = text_to_response(session["schema"], session["data"], prompt)
             query = "// Cypher Query\n" + query
-        st.write_stream(ai_response)
+        st.write(ai_response)
         st.code(query,language="cypher")
     session["chat"].append({"sender": "ai","message": ai_response, "query": query})
 
-# st.json(session, expanded=False)
+if st.secrets["DEV_ENV"]:
+    sidebar.json(session, expanded=False)
